@@ -2,37 +2,37 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabaseClient';
-import { MapPin, ArrowLeft, RefreshCw, AlertTriangle, CheckCircle, ShieldAlert, Navigation } from 'lucide-react';
+import { supabase } from '../../lib/supabaseClient';
+import { ArrowLeft, MapPin, Activity, AlertTriangle, CheckCircle, RefreshCw, Info } from 'lucide-react';
 
 export default function FloodMapPage() {
   const [stations, setStations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedStation, setSelectedStation] = useState(null);
-  const [filterStatus, setFilterStatus] = useState('all');
 
-  // ดึงข้อมูลสถานีวัดระดับน้ำจาก Supabase
+  // โหลดข้อมูลสถานีจาก Supabase
   const fetchStations = async () => {
+
     setLoading(true);
     setError(null);
     try {
       const { data, error: fetchError } = await supabase
         .from('flood_stations')
-        .select('*')
-        .order('name', { ascending: true });
+        .select('*');
 
       if (fetchError) {
         throw fetchError;
       }
 
       setStations(data || []);
+      // ถ้ามีข้อมูล ให้เลือกสถานีแรกเป็น Default
       if (data && data.length > 0 && !selectedStation) {
         setSelectedStation(data[0]);
       }
     } catch (err) {
       console.error('Error fetching flood stations:', err);
-      setError(err.message || 'ไม่สามารถดึงข้อมูลสถานีวัดระดับน้ำได้');
+      setError('ไม่สามารถโหลดข้อมูลสถานีวัดระดับน้ำได้ กรุณาลองใหม่อีกครั้ง');
     } finally {
       setLoading(false);
     }
@@ -42,416 +42,119 @@ export default function FloodMapPage() {
     fetchStations();
   }, []);
 
-  // กรองข้อมูลสถานีตามสถานะ
-  const filteredStations = stations.filter((station) => {
-    if (filterStatus === 'all') return true;
-    return station.status === filterStatus;
-  });
-
   // ฟังก์ชันคืนค่าการตกแต่งตามสถานะ (เขียว / เหลือง / แดง)
   const getStatusBadge = (status) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case 'critical':
         return {
           label: 'วิกฤต',
-          bg: '#fee2e2',
+          bg: '#fef2f2',
           text: '#dc2626',
           border: '#fca5a5',
-          icon: <ShieldAlert size={16} color="#dc2626" />,
+          icon: <AlertTriangle size={16} color="#dc2626" />
         };
       case 'warning':
         return {
           label: 'เฝ้าระวัง',
-          bg: '#fef3c7',
-          text: '#d97706',
-          border: '#fcd34d',
-          icon: <AlertTriangle size={16} color="#d97706" />,
+          bg: '#fefce8',
+          text: '#ca8a04',
+          border: '#fde047',
+          icon: <Activity size={16} color="#ca8a04" />
         };
       case 'normal':
       default:
         return {
           label: 'ปกติ',
-          bg: '#dcfce7',
+          bg: '#f0fdf4',
           text: '#16a34a',
           border: '#86efac',
-          icon: <CheckCircle size={16} color="#16a34a" />,
+          icon: <CheckCircle size={16} color="#16a34a" />
         };
     }
   };
 
   return (
-    <div style={styles.container}>
-      {/* Header */}
-      <header style={styles.header}>
-        <Link href="/" style={styles.backBtn}>
-          <ArrowLeft size={18} /> กลับหน้าหลัก
+    <main style={{ maxWidth: '900px', margin: '0 auto', padding: '1rem', fontFamily: 'sans-serif', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
+      {/* Header & Navigation */}
+      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', backgroundColor: '#ffffff', padding: '1rem', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#0284c7', textDecoration: 'none', fontWeight: 'bold' }}>
+          <ArrowLeft size={20} /> หน้าหลัก
         </Link>
-        <h1 style={styles.title}>
-          <MapPin color="#2563eb" size={28} /> แผนที่ติดตามระดับน้ำ
-        </h1>
-        <p style={styles.subtitle}>
-          เฝ้าระวังระดับน้ำและพื้นที่เสี่ยงภัยแบบเรียลไทม์
-        </p>
+        <h1 style={{ fontSize: '1.25rem', margin: 0, color: '#0f172a' }}>แผนที่เฝ้าระวังระดับน้ำ</h1>
+        <button 
+          onClick={fetchStations} 
+          style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.5rem 0.75rem', border: '1px solid #cbd5e1', borderRadius: '0.5rem', backgroundColor: '#fff', cursor: 'pointer' }}
+        >
+          <RefreshCw size={16} /> รีเฟรช
+        </button>
       </header>
 
-      {/* Filter & Refresh Controls */}
-      <div style={styles.controlBar}>
-        <div style={styles.filterGroup}>
-          <button
-            onClick={() => setFilterStatus('all')}
-            style={filterStatus === 'all' ? styles.filterBtnActive : styles.filterBtn}
-          >
-            ทั้งหมด ({stations.length})
-          </button>
-          <button
-            onClick={() => setFilterStatus('normal')}
-            style={filterStatus === 'normal' ? styles.filterBtnActive : styles.filterBtn}
-          >
-            ปกติ
-          </button>
-          <button
-            onClick={() => setFilterStatus('warning')}
-            style={filterStatus === 'warning' ? styles.filterBtnActive : styles.filterBtn}
-          >
-            เฝ้าระวัง
-          </button>
-          <button
-            onClick={() => setFilterStatus('critical')}
-            style={filterStatus === 'critical' ? styles.filterBtnActive : styles.filterBtn}
-          >
-            วิกฤต
-          </button>
+      {/* Loading State */}
+      {loading && (
+        <div style={{ textAlign: 'center', padding: '3rem 1rem', backgroundColor: '#fff', borderRadius: '0.75rem' }}>
+          <Activity size={32} style={{ animation: 'spin 1s linear infinite', color: '#0284c7' }} />
+          <p style={{ marginTop: '1rem', color: '#64748b' }}>กำลังโหลดข้อมูลระดับน้ำล่าสุด...</p>
         </div>
+      )}
 
-        <button onClick={fetchStations} style={styles.refreshBtn} disabled={loading}>
-          <RefreshCw size={16} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
-          รีเฟรชข้อมูล
-        </button>
-      </div>
-
-      {/* Main Layout (Map & Station Cards) */}
-      {loading ? (
-        <div style={styles.stateCard}>
-          <RefreshCw size={32} style={{ animation: spinAnimation }} />
-          <p style={{ marginTop: '0.75rem', color: '#64748b' }}>กำลังโหลดข้อมูลสถานีวัดน้ำ...</p>
-        </div>
-      ) : error ? (
-        <div style={{ ...styles.stateCard, backgroundColor: '#fef2f2', borderColor: '#fca5a5' }}>
-          <AlertTriangle size={36} color="#dc2626" />
-          <h3 style={{ color: '#dc2626', margin: '0.5rem 0 0.25rem' }}>เกิดข้อผิดพลาดในการโหลดข้อมูล</h3>
-          <p style={{ color: '#7f1d1d', fontSize: '0.9rem', marginBottom: '1rem' }}>{error}</p>
-          <button onClick={fetchStations} style={styles.retryBtn}>
+      {/* Error State */}
+      {error && !loading && (
+        <div style={{ padding: '1.5rem', backgroundColor: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '0.75rem', color: '#991b1b', textAlign: 'center', marginBottom: '1.5rem' }}>
+          <AlertTriangle size={32} style={{ margin: '0 auto 0.5rem auto' }} />
+          <p style={{ margin: 0, fontWeight: 'bold' }}>เกิดข้อผิดพลาด</p>
+          <p style={{ fontSize: '0.875rem', marginTop: '0.25rem' }}>{error}</p>
+          <button onClick={fetchStations} style={{ marginTop: '1rem', padding: '0.5rem 1rem', backgroundColor: '#dc2626', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer' }}>
             ลองใหม่อีกครั้ง
           </button>
         </div>
-      ) : (
-        <div style={styles.contentGrid}>
-          {/* แผนที่ OpenStreetMap iframe Embed */}
-          <div style={styles.mapContainer}>
-            <div style={styles.mapHeader}>
-              <Navigation size={18} color="#2563eb" />
-              <span style={{ fontWeight: '600', color: '#1e293b' }}>
-                {selectedStation ? `พิกัดสถานี: ${selectedStation.name}` : 'ตำแหน่งบนแผนที่'}
-              </span>
-            </div>
-            {selectedStation && selectedStation.latitude && selectedStation.longitude ? (
+      )}
+
+      {!loading && !error && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
+          
+          {/* ส่วนแสดงแผนที่ OpenStreetMap (iframe) */}
+          <div style={{ backgroundColor: '#fff', borderRadius: '0.75rem', padding: '1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <h2 style={{ fontSize: '1rem', color: '#334155', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <MapPin size={18} color="#0284c7" /> แผนที่ภาพรวมสถานี
+            </h2>
+            <div style={{ width: '100%', height: '280px', borderRadius: '0.5rem', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
               <iframe
                 title="OpenStreetMap"
                 width="100%"
-                height="380"
-                style={{ border: 0, borderRadius: '0 0 12px 12px' }}
-                loading="lazy"
-                src={`https://www.openstreetmap.org/export/embed.html?bbox=${selectedStation.longitude - 0.05}%2C${selectedStation.latitude - 0.05}%2C${selectedStation.longitude + 0.05}%2C${selectedStation.latitude + 0.05}&layer=mapnik&marker=${selectedStation.latitude}%2C${selectedStation.longitude}`}
-              />
-            ) : (
-              <div style={styles.mapPlaceholder}>
-                <MapPin size={40} color="#94a3b8" />
-                <p style={{ color: '#64748b', marginTop: '0.5rem' }}>กรุณาเลือกสถานีด้านล่างเพื่อแสดงพิกัดบนแผนที่</p>
-              </div>
+                height="100%"
+                frameBorder="0"
+                scrolling="no"
+                marginHeight="0"
+                marginWidth="0"
+                src={`https://www.openstreetmap.org/export/embed.html?bbox=${
+                  selectedStation?.longitude ? selectedStation.longitude - 0.05 : 100.4
+                }%2C${
+                  selectedStation?.latitude ? selectedStation.latitude - 0.05 : 13.7
+                }%2C${
+                  selectedStation?.longitude ? selectedStation.longitude + 0.05 : 100.6
+                }%2C${
+                  selectedStation?.latitude ? selectedStation.latitude + 0.05 : 13.9
+                }&layer=mapnik&marker=${selectedStation?.latitude || 13.756}%2C${selectedStation?.longitude || 100.501}`}
+              ></iframe>
+            </div>
+            {selectedStation && (
+              <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.5rem', textAlign: 'right' }}>
+                📍 แสดงพิกัด: {selectedStation.name || 'ไม่ระบุชื่อ'}
+              </p>
             )}
           </div>
 
-          {/* รายการการ์ดสถานีวัดระดับน้ำ */}
-          <div style={styles.stationListSection}>
-            <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: '#0f172a' }}>
-              รายการสถานีวัดระดับน้ำ ({filteredStations.length})
-            </h2>
-
-            {filteredStations.length === 0 ? (
-              <div style={styles.emptyCard}>ไม่พบข้อมูลสถานีในหมวดหมู่นี้</div>
-            ) : (
-              <div style={styles.cardsGrid}>
-                {filteredStations.map((station) => {
-                  const isSelected = selectedStation?.id === station.id;
-                  const badge = getStatusBadge(station.status);
-
-                  return (
-                    <div
-                      key={station.id || station.name}
-                      onClick={() => setSelectedStation(station)}
-                      style={{
-                        ...styles.stationCard,
-                        borderColor: isSelected ? '#2563eb' : '#e2e8f0',
-                        backgroundColor: isSelected ? '#eff6ff' : '#ffffff',
-                        boxShadow: isSelected ? '0 0 0 2px #93c5fd' : '0 2px 4px rgba(0,0,0,0.05)',
-                      }}
-                    >
-                      <div style={styles.cardHeader}>
-                        <h3 style={styles.stationName}>{station.name}</h3>
-                        <span
-                          style={{
-                            ...styles.badge,
-                            backgroundColor: badge.bg,
-                            color: badge.text,
-                            borderColor: badge.border,
-                          }}
-                        >
-                          {badge.icon} {badge.label}
-                        </span>
-                      </div>
-
-                      <div style={styles.levelDetail}>
-                        <div style={styles.levelBox}>
-                          <span style={styles.levelLabel}>ระดับน้ำปัจจุบัน</span>
-                          <span style={{ ...styles.levelValue, color: badge.text }}>
-                            {station.current_level ?? '-'} <small style={{ fontSize: '0.8rem' }}>ม.</small>
-                          </span>
-                        </div>
-
-                        <div style={styles.levelBox}>
-                          <span style={styles.levelLabel}>เกณฑ์เตือนภัย</span>
-                          <span style={styles.thresholdValue}>
-                            {station.warning_threshold ?? '-'} <small style={{ fontSize: '0.8rem' }}>ม.</small>
-                          </span>
-                        </div>
-                      </div>
-
-                      {station.location_name && (
-                        <p style={styles.locationText}>
-                          <MapPin size={12} style={{ marginRight: '4px' }} />
-                          {station.location_name}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-const spinAnimation = 'spin 1s linear infinite';
-
-// Inline CSS Styles (รองรับ Responsive มือถือ)
-const styles = {
-  container: {
-    maxWidth: '1100px',
-    margin: '0 auto',
-    padding: '1.5rem 1rem',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
-    color: '#1e293b',
-  },
-  header: {
-    marginBottom: '1.5rem',
-  },
-  backBtn: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '0.4rem',
-    color: '#2563eb',
-    textDecoration: 'none',
-    fontSize: '0.9rem',
-    fontWeight: '500',
-    marginBottom: '0.75rem',
-  },
-  title: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-    fontSize: '1.75rem',
-    margin: '0 0 0.25rem 0',
-    color: '#0f172a',
-  },
-  subtitle: {
-    color: '#64748b',
-    fontSize: '0.95rem',
-    margin: 0,
-  },
-  controlBar: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: '1rem',
-    marginBottom: '1.5rem',
-    backgroundColor: '#ffffff',
-    padding: '0.75rem 1rem',
-    borderRadius: '10px',
-    border: '1px solid #e2e8f0',
-  },
-  filterGroup: {
-    display: 'flex',
-    gap: '0.5rem',
-    flexWrap: 'wrap',
-  },
-  filterBtn: {
-    padding: '0.4rem 0.8rem',
-    borderRadius: '6px',
-    border: '1px solid #cbd5e1',
-    backgroundColor: '#f8fafc',
-    color: '#475569',
-    fontSize: '0.85rem',
-    cursor: 'pointer',
-  },
-  filterBtnActive: {
-    padding: '0.4rem 0.8rem',
-    borderRadius: '6px',
-    border: '1px solid #2563eb',
-    backgroundColor: '#2563eb',
-    color: '#ffffff',
-    fontSize: '0.85rem',
-    fontWeight: '500',
-    cursor: 'pointer',
-  },
-  refreshBtn: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '0.4rem',
-    padding: '0.4rem 0.8rem',
-    borderRadius: '6px',
-    border: '1px solid #cbd5e1',
-    backgroundColor: '#ffffff',
-    color: '#334155',
-    fontSize: '0.85rem',
-    cursor: 'pointer',
-  },
-  stateCard: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '3rem 1rem',
-    backgroundColor: '#ffffff',
-    borderRadius: '12px',
-    border: '1px solid #e2e8f0',
-    textAlign: 'center',
-  },
-  retryBtn: {
-    padding: '0.5rem 1rem',
-    backgroundColor: '#dc2626',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-  },
-  contentGrid: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1.5rem',
-  },
-  mapContainer: {
-    backgroundColor: '#ffffff',
-    borderRadius: '12px',
-    border: '1px solid #e2e8f0',
-    overflow: 'hidden',
-  },
-  mapHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-    padding: '0.75rem 1rem',
-    borderBottom: '1px solid #e2e8f0',
-    backgroundColor: '#f8fafc',
-  },
-  mapPlaceholder: {
-    height: '280px',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f1f5f9',
-  },
-  stationListSection: {
-    marginTop: '0.5rem',
-  },
-  cardsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-    gap: '1rem',
-  },
-  stationCard: {
-    padding: '1rem',
-    borderRadius: '10px',
-    border: '1px solid #e2e8f0',
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  },
-  cardHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: '0.5rem',
-    marginBottom: '0.75rem',
-  },
-  stationName: {
-    fontSize: '1rem',
-    fontWeight: '600',
-    margin: 0,
-    color: '#0f172a',
-  },
-  badge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '0.25rem',
-    padding: '0.2rem 0.5rem',
-    borderRadius: '9999px',
-    fontSize: '0.75rem',
-    fontWeight: '600',
-    border: '1px solid transparent',
-  },
-  levelDetail: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '0.5rem',
-    backgroundColor: '#ffffff',
-    padding: '0.5rem',
-    borderRadius: '6px',
-    border: '1px solid #f1f5f9',
-  },
-  levelBox: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  levelLabel: {
-    fontSize: '0.75rem',
-    color: '#64748b',
-  },
-  levelValue: {
-    fontSize: '1.25rem',
-    fontWeight: '700',
-  },
-  thresholdValue: {
-    fontSize: '1.25rem',
-    fontWeight: '600',
-    color: '#475569',
-  },
-  locationText: {
-    fontSize: '0.8rem',
-    color: '#64748b',
-    margin: '0.5rem 0 0 0',
-    display: 'flex',
-    alignItems: 'center',
-  },
-  emptyCard: {
-    padding: '2rem',
-    textAlign: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: '8px',
-    color: '#64748b',
-    border: '1px dashed #cbd5e1',
-  },
-};
+          {/* รายละเอียดสถานีที่เลือก (Detail Modal Card) */}
+          {selectedStation && (
+            <div style={{ backgroundColor: '#ffffff', padding: '1.25rem', borderRadius: '0.75rem', borderLeft: `6px solid ${getStatusBadge(selectedStation.status).text}`, boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>สถานีที่เลือก</span>
+                  <h3 style={{ margin: '0.25rem 0', fontSize: '1.25rem', color: '#0f172a' }}>{selectedStation.name}</h3>
+                  <p style={{ margin: 0, fontSize: '0.875rem', color: '#475569' }}>📍 {selectedStation.location || 'ไม่ระบุตำแหน่ง'}</p>
+                </div>
+                <div style={{
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: '9999px',
+                  backgroundColor: getStatusBadge(selectedStation.status).bg,
+                  color: getStatusBadge(selectedStation.status).
