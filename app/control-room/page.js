@@ -281,3 +281,22 @@ export default function ControlRoomPage() {
                         borderRadius: '0.375rem',
                         fontSize: '0.875rem',
                         fontWeight: 'bold',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.35rem'
+                      }}
+                    >
+                      {updatingId === incident.id ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : null}
+                      ช่วยเหลือสำเร็จ
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </main>
+  );
+}
