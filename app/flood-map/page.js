@@ -157,4 +157,98 @@ export default function FloodMapPage() {
                   padding: '0.35rem 0.75rem',
                   borderRadius: '9999px',
                   backgroundColor: getStatusBadge(selectedStation.status).bg,
-                  color: getStatusBadge(selectedStation.status).
+                  color: getStatusBadge(selectedStation.status).text,
+                  border: `1px solid ${getStatusBadge(selectedStation.status).border}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  fontSize: '0.875rem',
+                  fontWeight: 'bold'
+                }}>
+                  {getStatusBadge(selectedStation.status).icon}
+                  {getStatusBadge(selectedStation.status).label}
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem', backgroundColor: '#f8fafc', padding: '0.75rem', borderRadius: '0.5rem' }}>
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>ระดับน้ำปัจจุบัน</span>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: getStatusBadge(selectedStation.status).text }}>
+                    {selectedStation.current_water_level ?? '-'} <span style={{ fontSize: '0.875rem' }}>ม.</span>
+                  </div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>เกณฑ์เตือนภัย</span>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#334155' }}>
+                    {selectedStation.warning_threshold ?? '-'} <span style={{ fontSize: '0.875rem' }}>ม.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* รายการสถานีทั้งหมด (List View) */}
+          <div>
+            <h2 style={{ fontSize: '1.125rem', color: '#0f172a', marginBottom: '0.75rem' }}>
+              รายการสถานีทั้งหมด ({stations.length})
+            </h2>
+
+            {stations.length === 0 ? (
+              <div style={{ backgroundColor: '#fff', padding: '2rem', textAlign: 'center', borderRadius: '0.75rem', color: '#64748b' }}>
+                <Info size={32} style={{ marginBottom: '0.5rem' }} />
+                <p>ยังไม่มีข้อมูลสถานีในระบบ</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '0.75rem' }}>
+                {stations.map((station) => {
+                  const badge = getStatusBadge(station.status);
+                  const isSelected = selectedStation?.id === station.id;
+
+                  return (
+                    <div
+                      key={station.id || Math.random()}
+                      onClick={() => setSelectedStation(station)}
+                      style={{
+                        padding: '1rem',
+                        backgroundColor: isSelected ? '#f0f9ff' : '#ffffff',
+                        border: isSelected ? '2px solid #0284c7' : '1px solid #e2e8f0',
+                        borderRadius: '0.75rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: badge.text }}></div>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: '1rem', color: '#0f172a' }}>{station.name}</h4>
+                          <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8125rem', color: '#64748b' }}>
+                            ระดับน้ำ: <strong>{station.current_water_level ?? '-'} ม.</strong> / เกณฑ์: {station.warning_threshold ?? '-'} ม.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div style={{
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '0.375rem',
+                        backgroundColor: badge.bg,
+                        color: badge.text,
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold'
+                      }}>
+                        {badge.label}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
+    </main>
+  );
+}
