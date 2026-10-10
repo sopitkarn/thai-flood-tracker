@@ -21,13 +21,11 @@ export default function ReportIncidentPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  // ฟังก์ชั่นอัปเดตค่าใน Form State
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // ฟังก์ชั่นดึงพิกัด GPS ปัจจุบันผ่าน navigator.geolocation
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
       setErrorMessage('เบราว์เซอร์ของคุณไม่รองรับการดึงตำแหน่งพิกัด GPS');
@@ -55,13 +53,11 @@ export default function ReportIncidentPage() {
     );
   };
 
-  // ฟังก์ชั่นจัดการการส่งฟอร์มขอความช่วยเหลือ
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
 
-    // Validation ตรวจสอบข้อมูลสำคัญ
     if (!formData.reporter_name.trim()) {
       setErrorMessage('กรุณาระบุชื่อผู้แจ้ง');
       return;
@@ -71,33 +67,35 @@ export default function ReportIncidentPage() {
       return;
     }
     if (!formData.latitude || !formData.longitude) {
-      setErrorMessage('กรุณาระบุพิกัดละติจูดและลองจิจูด หรือกดปุ่มดึงตำแหน่ง GPS');
+      setErrorMessage('กรุณาระบุพิกัดละติจูดและลองจิจูด');
       return;
     }
 
     setLoading(true);
 
     try {
-      // Insert ข้อมูลลงตาราง flood_incidents
-      const { error } = await supabase.from('flood_incidents').insert([
-        {
-          reporter_name: formData.reporter_name,
-          phone: formData.phone,
-          latitude: parseFloat(formData.latitude),
-          longitude: parseFloat(formData.longitude),
-          water_level_cm: formData.water_level_cm ? parseInt(formData.water_level_cm) : null,
-          people_count: formData.people_count ? parseInt(formData.people_count) : 1,
-          details: formData.details,
-          status: 'pending' // สถานะเริ่มต้นเป็นรอความช่วยเหลือ
-        }
-      ]);
+      // แปลงค่าข้อมูลอย่างปลอดภัยก่อนส่ง
+      const payload = {
+        reporter_name: String(formData.reporter_name).trim(),
+        phone: String(formData.phone).trim(),
+        latitude: parseFloat(formData.latitude),
+        longitude: parseFloat(formData.longitude),
+        water_level_cm: formData.water_level_cm ? parseInt(formData.water_level_cm, 10) : null,
+        people_count: formData.people_count ? parseInt(formData.people_count, 10) : 1,
+        details: formData.details ? String(formData.details).trim() : null,
+        status: 'pending'
+      };
+
+      const { data, error } = await supabase
+        .from('flood_incidents')
+        .insert([payload])
+        .select();
 
       if (error) {
         throw error;
       }
 
       setSuccessMessage('ส่งข้อมูลขอความช่วยเหลือเรียบร้อยแล้ว เจ้าหน้าที่จะเร่งประสานงานโดยด่วน');
-      // เคลียร์ค่าในฟอร์ม
       setFormData({
         reporter_name: '',
         phone: '',
@@ -109,7 +107,9 @@ export default function ReportIncidentPage() {
       });
     } catch (err) {
       console.error('Error submitting incident report:', err);
-      setErrorMessage('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง');
+      // แสดงข้อความ Error ที่ส่งกลับมาจาก Supabase โดยตรง
+      const detailError = err?.message || err?.details || 'ไม่สามารถเชื่อมต่อกับฐานข้อมูลได้';
+      setErrorMessage(`เกิดข้อผิดพลาด: ${detailError}`);
     } finally {
       setLoading(false);
     }
@@ -117,7 +117,6 @@ export default function ReportIncidentPage() {
 
   return (
     <main style={{ maxWidth: '640px', margin: '0 auto', padding: '1rem', fontFamily: 'sans-serif', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
-      {/* Header */}
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', backgroundColor: '#ffffff', padding: '1rem', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#0284c7', textDecoration: 'none', fontWeight: 'bold' }}>
           <ArrowLeft size={20} /> หน้าหลัก
@@ -127,13 +126,11 @@ export default function ReportIncidentPage() {
         </h1>
       </header>
 
-      {/* Form Container */}
       <div style={{ backgroundColor: '#ffffff', padding: '1.5rem', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
         
-        {/* Success Alert */}
         {successMessage && (
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', backgroundColor: '#f0fdf4', border: '1px solid #86efac', color: '#166534', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1.25rem' }}>
-            <CheckCircle2 size={24} style={{ shrink: 0, marginTop: '2px' }} />
+            <CheckCircle2 size={24} style={{ flexShrink: 0, marginTop: '2px' }} />
             <div>
               <p style={{ margin: 0, fontWeight: 'bold' }}>ส่งข้อมูลสำเร็จ!</p>
               <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.875rem' }}>{successMessage}</p>
@@ -141,20 +138,17 @@ export default function ReportIncidentPage() {
           </div>
         )}
 
-        {/* Error Alert */}
         {errorMessage && (
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', backgroundColor: '#fef2f2', border: '1px solid #fca5a5', color: '#991b1b', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1.25rem' }}>
-            <AlertTriangle size={24} style={{ shrink: 0, marginTop: '2px' }} />
+            <AlertTriangle size={24} style={{ flexShrink: 0, marginTop: '2px' }} />
             <div>
               <p style={{ margin: 0, fontWeight: 'bold' }}>พบข้อผิดพลาด</p>
-              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.875rem' }}>{errorMessage}</p>
+              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.875rem', wordBreak: 'break-word' }}>{errorMessage}</p>
             </div>
           </div>
         )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          
-          {/* ชื่อผู้แจ้ง */}
           <div>
             <label style={labelStyle}>ชื่อ-นามสกุล ผู้แจ้ง <span style={{ color: '#e11d48' }}>*</span></label>
             <input
@@ -168,7 +162,6 @@ export default function ReportIncidentPage() {
             />
           </div>
 
-          {/* เบอร์ติดต่อ */}
           <div>
             <label style={labelStyle}>เบอร์โทรศัพท์ติดต่อ <span style={{ color: '#e11d48' }}>*</span></label>
             <input
@@ -182,7 +175,6 @@ export default function ReportIncidentPage() {
             />
           </div>
 
-          {/* พิกัด Location & ปุ่ม GPS */}
           <div style={{ backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
               <label style={{ ...labelStyle, marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
@@ -241,7 +233,6 @@ export default function ReportIncidentPage() {
             </div>
           </div>
 
-          {/* ระดับน้ำ และ จำนวนผู้ประสบภัย */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
               <label style={labelStyle}>ระดับน้ำโดยประมาณ (ซม.)</label>
@@ -269,7 +260,6 @@ export default function ReportIncidentPage() {
             </div>
           </div>
 
-          {/* รายละเอียดเพิ่มเติม */}
           <div>
             <label style={labelStyle}>รายละเอียดเพิ่มเติม</label>
             <textarea
@@ -282,7 +272,6 @@ export default function ReportIncidentPage() {
             />
           </div>
 
-          {/* ปุ่ม Submit */}
           <button
             type="submit"
             disabled={loading}
@@ -306,7 +295,6 @@ export default function ReportIncidentPage() {
             {loading ? <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={20} />}
             {loading ? 'กำลังส่งข้อมูล...' : 'ส่งขอความช่วยเหลือ'}
           </button>
-
         </form>
       </div>
     </main>
